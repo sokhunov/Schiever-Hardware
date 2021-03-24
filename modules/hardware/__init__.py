@@ -1,1 +1,1 @@
-from .hardware import Hardware, HardwareUse
+from .hardware import Hardware

@@ -1,1 +1,1 @@
-from .user import Worker, Department
+from .db_users import Worker, Department
