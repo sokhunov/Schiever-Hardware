@@ -1,0 +1,148 @@
+{# ==== HARDWARE PAGE MACROSES ===== #}
+{% macro fill_hardware_table(hardware) %}
+    <tr>
+        <th scope="row" class="text-center align-middle text-info">{{ "{:0>9s}".format(hardware.hardware_id|string()) }}</th>
+        <td class="text-center align-middle text-dark p-1">{{ hardware.name }}</td>
+        <td class="text-center align-middle text-dark p-1 text-nowrap">{{ hardware.validation_date }}</td>
+        <td class="text-center align-middle text-dark p-1">{{ hardware.serial_num if hardware.serial_num }}</td>
+        <td class="text-center align-middle text-dark {{ 'bg-muted' if hardware.hardware_condition_id == 2 }} p-1">
+            {{ hardware.hardware_condition.name }}</td>
+        <td class="text-center align-middle text-dark p-1">{{ hardware.hardware_type.name }}</td>
+        <td class="text-center align-middle text-dark p-1">{{ hardware.hardware_brand.name }}</td>
+        <td class="text-center align-middle text-dark p-1">{{ hardware.description if hardware.description }}</td>
+{#        <td class="text-center align-middle text-dark p-1 text-nowrap">#}
+{#            <a href="{{ url_for('edit_hardware', inven_number = row.hardware_id ) }}"#}
+{#               class="btn btn-warning btn-xs p-2">#}
+{#                <i class="fa fa-pencil" aria-hidden="true"></i></a>#}
+{#            <a href="{{ url_for('delete_hardware', inven_number = row.hardware_id) }}"#}
+{#               class="btn btn-danger btn-xs p-2"#}
+{#               onclick="return confirm('Вы уверены, что хотите удалить ?')">#}
+{#                <i class="fa fa-times" aria-hidden="true"></i></a>#}
+{#        </td>#}
+        <td>
+            <button class="btn add_for_arrange"><i class="fa fa-plus-circle" aria-hidden="true"></i></button>
+        </td>
+    </tr>
+{% endmacro %}
+
+
+{% macro init_datatable(table_id) %}
+    <script src="{{ url_for('static', filename='jquery.dataTables.js') }}"></script>
+    <script src="{{ url_for('static', filename='dataTables.bootstrap4.js') }}"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            let hardware_table = $('{{ table_id }}').DataTable({
+                'order': [[1, 'asc']],
+                "responsive": "true",
+                "language": {
+                    "lengthMenu": "Показать _MENU_ ",
+                    "zeroRecords": "Упс .. ничего не найдено",
+                    "info": "Страница _PAGE_ из _PAGES_",
+                    "infoEmpty": "Данных не найдено.",
+                    "infoFiltered": "(Всего _MAX_ элементов)",
+                    "search": "Поиск ",
+                    "paginate": {
+                        "first": "В начало",
+                        "last": "В конец",
+                        "next": "Вперед",
+                        "previous": "Назад"
+                    }
+                },
+                "lengthMenu": [[5, 10, 20, -1], [5, 10, 20, "Все"]]
+            });
+
+
+            let arrange_form = $('#arrange_form');
+            {# Add for arrangment table #}
+            hardware_table.on('click', '.add_for_arrange', function () {
+                console.log(hardware_table);
+
+                let x_mark = '<button type="button" class="btn btn-xs p-1 x-mark"> ' +
+                    '<i class="fa fa-times" aria-hidden="true"></i></button>';
+
+                let hardware_info = hardware_table.row($(this).closest('tr')).data();
+                console.log(hardware_info);
+                let row_templ = '<td><input style="font-size: 0.85em" readonly class="form-control-plaintext text-center" type="text" ';
+                let markup = '<tr>' + row_templ + 'name="hardware_id" value="' + hardware_info[0] + '"></td>'
+                    + row_templ + 'value="' + hardware_info[1] + '"></td>'
+                    + row_templ + 'value="' + hardware_info[5] + '"></td>'
+                    + '<td class="text-center">' + x_mark + '</td>' + '</tr>';
+
+                arrange_form.find('#arrange_form_body').append(markup);
+            });
+            {# Remove all rows in the arrange for table #}
+            $("#clear_for_arrange_table").on('click', function () {
+                arrange_form.find('#arrange_form_body').empty();
+            });
+            {# Remove row from arrange table #}
+            $("#arrange_table").on('click', '.x-mark', function () {
+                $(this).closest('tr').remove();
+            });
+        });
+    </script>
+{% endmacro %}
+
+
+
+{# ==== ARRANGE PAGE MACORSES ==== #}
+
+{% macro hardware_for_arrange_input_head(text) %}
+    <h6 class="mb-0"> {{ text }}</h6>
+{% endmacro %}
+
+
+{% macro hardware_for_arrange_inputs(hardware) %}
+    <td>
+        <input style="" readonly class="form-control-plaintext text-center" type="text"
+               value="{{ "{:0>9s}".format(hardware.hardware_id|string()) }}" name="hardware_id">
+    </td>
+    <td>
+        <input style="" readonly class="form-control-plaintext text-center" type="text"
+               value="{{ hardware.name }}">
+    </td>
+    <td>
+        <input style="" readonly class="form-control-plaintext text-center" type="text"
+               value="{{ hardware.serial_num if hardware.serial_num}}">
+    </td>
+    <td>
+        <input style="" readonly class="form-control-plaintext text-center" type="text"
+               value="{{ hardware.hardware_brand.name }}">
+    </td>
+{% endmacro %}
+
+{% macro arrange_operation() %}
+    <script src="{{ url_for('static', filename='jquery.js') }}"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            let operation = $("#operation");
+            let worker2 = $("#worker2");
+            operation.on('change', function (e) {
+                {# If operation ID == 3. It means worker transfers equipments to worker2.
+                 It this case activate hidden input for the worker2 else deactivate #}
+                if ($(this).val() == 3) {
+                    worker2.removeAttr('hidden');
+                    worker2.find('select').attr('required', 'true');
+                } else {
+                    worker2.attr('hidden', '');
+                    worker2.find('select').removeAttr('required');
+                }
+            });
+
+            {# Logic for the bottom fields of the page. For workers name and signatures #}
+            let IT_worker = $("#it_worker");
+            IT_worker.on('change', function () {
+                let IT_text = $('option:selected', this).text();
+                $('#it_sign').text(IT_text);
+            });
+            let worker1 = $('#worker1');
+            worker1.on('change', function () {
+                let worker1_text = $('option:selected', this).text();
+                $('#worker_sign').text(worker1_text);
+            });
+            worker2.on('change', function () {
+                let worker2_text = $('option:selected', this).text();
+                $('#worker_sign').text(worker2_text);
+            });
+        });
+    </script>
+{% endmacro %}

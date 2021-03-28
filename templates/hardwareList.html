@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% from '_macros_.html' import fill_hardware_table, init_datatable, add_for_arrange  with context %}
+
+
+{% block head %}
+    <title>STJ Hardware list</title>
+{% endblock %}
+
+
+{% block content %}
+    <div class="w-75 mx-2 d-block">
+        {% include 'includes/arrange_table.html' %}
+    </div>
+
+        <table id="hardware_table" class="table table-sm table-hover table-bordered">
+            {% if list_of_hardware %}
+                <thead class="text-capitalize text-center thead-dark">
+                <tr class="h6">
+                    <th class="align-middle font-weight-bold">Инвет.</th>
+                    <th class="align-middle font-weight-bold">Наименование</th>
+                    <th class="align-middle font-weight-bold">Дата учета</th>
+                    <th class="align-middle font-weight-bold">Серийный номер</th>
+                    <th class="align-middle font-weight-bold">Статус</th>
+                    <th class="align-middle font-weight-bold">Тип оборудования</th>
+                    <th class="align-middle font-weight-bold">Бренд</th>
+                    <th class="align-middle font-weight-bold">Примечание</th>
+                    <th class="align-middle font-weight-bold">Действие</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for hardware in list_of_hardware %}
+                    {# Add row from macros #}
+                    {{ fill_hardware_table(hardware) }}
+
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td class="font-weight-bold text-info h2">Данные отсутствуют</td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='jquery.js') }}"></script>
+    <script src="{{ url_for('static', filename='popper.js') }}"></script>
+    <script src="{{ url_for('static', filename='bootstrap.js') }}"></script>
+    {{ init_datatable('#hardware_table') }}
+
+{% endblock %}
+

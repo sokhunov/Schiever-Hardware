@@ -5,6 +5,7 @@ from sqlalchemy.ext.hybrid import hybrid_method
 from datetime import date, datetime
 from modules.session_manager import load_session
 
+
 Base = automap_base()
 
 
@@ -77,7 +78,6 @@ class Hardware(Base):
     def get_list_of_hardware(self):
         db_session = load_session()
         result = db_session.query(Hardware).all()
-        # db_session.close()
         return result
 
 
