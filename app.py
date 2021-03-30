@@ -1,6 +1,5 @@
-from modules.hardware import Hardware
 from flask import Flask, render_template, request, redirect, url_for
-from modules.arranges import PreArrange, arrange
+import modules.model as model
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -8,7 +7,7 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 @app.route('/')
 def hardware_list():
-    list_of_hardware = Hardware.get_list_of_hardware()
+    list_of_hardware = model.Hardware.get_list_of_hardware()
     return render_template('hardwareList.html', list_of_hardware=list_of_hardware)
 
 
@@ -20,11 +19,14 @@ def prepare_for_arrange():
         redirect(url_for('hardware_list'))
     else:
         selected_hardware = data['hardware_id']
-        arrange_params = PreArrange(hardware=selected_hardware)
+        arrange_params = model.PreArrange(hardware=selected_hardware)
         return render_template('arrange_hardware.html', arrange_params=arrange_params)
 
 
 @app.route('/arrange_hardware', methods=['POST'])
 def arrange_hardware():
     form_data = request.form.to_dict(flat=False)
-    print(form_data)
+    result = model.ArrangeHardware(**form_data)
+    message, status = result.arrange()
+    print(message, status)
+    return redirect(url_for('hardware_list'))
