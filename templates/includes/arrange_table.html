@@ -29,20 +29,3 @@
 </form>
 <hr class="hr">
 
-<section class="row justify-content-end">
-    <div class="col">
-        {% with messages = get_flashed_messages(with_categories=True) %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert {{ message[0] }} alert-dismissible fade show" role="alert">
-                        <span>{{ message[1] }}</span>
-                        <button type="button" class="close jus" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </div>
-</section>
-

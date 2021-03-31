@@ -1,9 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 import modules.model as model
+import secrets
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
+secret = secrets.token_urlsafe(32)
+app.secret_key = secret
 
 @app.route('/')
 def hardware_list():
@@ -28,5 +31,5 @@ def arrange_hardware():
     form_data = request.form.to_dict(flat=False)
     result = model.ArrangeHardware(**form_data)
     message, status = result.arrange()
-    print(message, status)
+    flash(message, status)
     return redirect(url_for('hardware_list'))

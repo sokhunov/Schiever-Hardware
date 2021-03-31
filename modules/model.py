@@ -20,9 +20,9 @@ class ArrangeOperation(Base):
         3 = Передал(а)
     """
 
-    ACCEPT      = 1  # Принял(а)
-    RETURN      = 2  # Сдал(а)
-    TRANSFER    = 3  # Передал(а)
+    ACCEPT = 1  # Принял(а)
+    RETURN = 2  # Сдал(а)
+    TRANSFER = 3  # Передал(а)
 
     __tablename__ = 'arrange_operations'
 
@@ -91,6 +91,8 @@ class ArrangeHardware(Base):
         self.hardware_arrange = self.get_hardware()
         self.unavailable_hardware = []
 
+        self.create_hardware_for_arrange()
+
     def __repr__(self):
         return f'Arrange(hardware = {self.hardware}, it_worker_id = {self.it_worker}, employee = {self.employee}' \
                f'operation = {self.operation} '
@@ -101,14 +103,11 @@ class ArrangeHardware(Base):
         return result
 
     def arrange(self):
-        missing_hardware = self.get_missing_hardware()
-
-        if missing_hardware:
-            self.create_hardware(missing_hardware)
-
         status_code = self.validate_operation()
-        if not status_code == 0:
+        if status_code != 0:
             return self.get_status_message(status_code)
+
+        self.arrange_to_employee()
 
         return self.get_status_message(status_code)
 
@@ -122,31 +121,16 @@ class ArrangeHardware(Base):
                    self.STATUS_MESSAGES[status_code]['status']
 
     @hybrid_method
-    def get_missing_hardware(self) -> list:
+    def create_hardware_for_arrange(self):
         """
-        Return hardware which exists in hardware table but not in hardware_use table
+        Create hardware which is not in the db table Hardware_use
         :return:
         """
-        missing_hardware = []
-        result = self.db_session.query(Hardware).filter(Hardware.hardware_id.in_(self.hardware_id)).all()
-        if result:
-            for hardware in result:
-                if not hardware.hardware_use:
-                    missing_hardware.append(hardware)
-        else:
-            missing_hardware.extend(result)
+        for hardware_ in self.hardware_arrange:
+            if not hardware_.hardware_use:
+                new_hdw = HardwareUse(hardware_id=hardware_.hardware_id)
+                hardware_.hardware_use = new_hdw
 
-        return missing_hardware
-
-    @hybrid_method
-    def create_hardware(self, hardware_to_create):
-        hardware_list = []
-        for hardware in hardware_to_create:
-            hardware_use = HardwareUse(hardware_id=hardware.hardware_id)
-            hardware.hardware_use.append(hardware_use)
-            hardware_list.append(hardware)
-
-        self.db_session.add_all(hardware_list)
         self.db_session.commit()
 
     @hybrid_method
@@ -183,19 +167,26 @@ class ArrangeHardware(Base):
 
     @hybrid_method
     def arrange_to_employee(self):
+        """
+        If operation == RETURN then change status of all hardware to FREE
+        elif operation == ACCEPT then change status and owner to employee
+        elif operation == TRANSFER then change status and owner to employee2
+        :return:
+        """
         if self.operation_id == ArrangeOperation.RETURN:  # Сдал
-            self.arrange_hardware(status_id=1)
+            self.proceed_arrange(status_id=ArrangeStatus.FREE)
         elif self.operation_id == ArrangeOperation.ACCEPT:
-            self.arrange_hardware(status_id=2, employee_id=self.employee_id)
+            self.proceed_arrange(status_id=ArrangeStatus.IN_USE, employee_id=self.employee_id)
         elif self.operation_id == ArrangeOperation.TRANSFER:
-            self.arrange_hardware(status_id=2, employee_id=self.employee2_id)
+            self.proceed_arrange(status_id=ArrangeStatus.IN_USE, employee_id=self.employee2_id)
 
     @hybrid_method
-    def arrange_hardware(self, status_id, employee_id=None):
-        for hardware in self.hardware_arrange:
-            hardw_use = HardwareUse(hardware_id=hardware.hardware_id, doc_date=self.doc_date, doc_num=self.doc_num,
-                                    status_id=status_id, employee_id=employee_id)
-            hardware.hardware_use = hardw_use
+    def proceed_arrange(self, status_id, employee_id=None):
+        for hardware_ in self.hardware_arrange:
+            hardware_.hardware_use.doc_date = self.doc_date
+            hardware_.hardware_use.doc_num = self.doc_num
+            hardware_.hardware_use.status_id = status_id
+            hardware_.hardware_use.employee_id = employee_id
 
         self.db_session.commit()
 
@@ -230,7 +221,7 @@ class PreArrange:
         if not last_doc_num:
             return 1
 
-        return last_doc_num
+        return last_doc_num + 1
 
     def get_arrange_operations(self):
         return self.db_session.query(ArrangeOperation).all()
@@ -332,6 +323,7 @@ class HardwareUse(Base):
     status_id = Column(Integer, ForeignKey('arrange_statuses.arr_status_id'), default=ArrangeStatus.FREE)
     doc_num = Column(Integer, nullable=True)
     doc_date = Column(Date, default=date.today)
+    log_date = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     status = relationship('ArrangeStatus', viewonly=True)
     employee = relationship('Worker', viewonly=True)
