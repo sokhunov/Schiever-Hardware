@@ -10,17 +10,20 @@
         <td class="text-center align-middle text-dark p-1">{{ hardware.hardware_type.name }}</td>
         <td class="text-center align-middle text-dark p-1">{{ hardware.hardware_brand.name }}</td>
         <td class="text-center align-middle text-dark p-1">{{ hardware.description if hardware.description }}</td>
-{#        <td class="text-center align-middle text-dark p-1 text-nowrap">#}
-{#            <a href="{{ url_for('edit_hardware', inven_number = row.hardware_id ) }}"#}
-{#               class="btn btn-warning btn-xs p-2">#}
-{#                <i class="fa fa-pencil" aria-hidden="true"></i></a>#}
+        <td class="text-center align-middle text-dark p-1 {{ hardware.hardware_use.status_color() if hardware.hardware_use}} "></td>
+        <td class="text-center align-middle text-dark p-1 text-nowrap">
+
 {#            <a href="{{ url_for('delete_hardware', inven_number = row.hardware_id) }}"#}
 {#               class="btn btn-danger btn-xs p-2"#}
 {#               onclick="return confirm('Вы уверены, что хотите удалить ?')">#}
 {#                <i class="fa fa-times" aria-hidden="true"></i></a>#}
 {#        </td>#}
-        <td>
             <button class="btn add_for_arrange"><i class="fa fa-plus-circle" aria-hidden="true"></i></button>
+            <a href="{{ url_for('pre_edit_hardware', hardware_id = hardware.hardware_id ) }}"
+               class="btn border btn-xs p-2">
+                <i class="fa fa-pencil" aria-hidden="true"></i>
+            </a>
+
         </td>
     </tr>
 {% endmacro %}
@@ -94,7 +97,7 @@
 {% macro hardware_for_arrange_inputs(hardware) %}
     <td>
         <input style="" readonly class="form-control-plaintext text-center" type="text"
-               value="{{ "{:0>9s}".format(hardware.hardware_id|string()) }}" name="hardware_id">
+               value="{{ hardware.code_format }}" name="hardware_id">
     </td>
     <td>
         <input style="" readonly class="form-control-plaintext text-center" type="text"

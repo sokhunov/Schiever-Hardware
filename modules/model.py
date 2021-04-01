@@ -242,6 +242,9 @@ class Brand(Base):
     brand_id = Column(Integer, primary_key=True)
     name = Column(String)
 
+    def __repr__(self):
+        return f'Brand(condition_id = {self.brand_id}, name = {self.name})'
+
 
 class HardwareCondition(Base):
     """
@@ -251,6 +254,9 @@ class HardwareCondition(Base):
 
     condition_id = Column(Integer, primary_key=True)
     name = Column(String)
+
+    def __repr__(self):
+        return f'HardwareCondition(condition_id = {self.condition_id}, name = {self.name})'
 
 
 class HardwareType(Base):
@@ -273,8 +279,8 @@ class Hardware(Base):
     hardware_condition_id = Column('id_condition', Integer, ForeignKey('hardware_conditions.condition_id'))
     hardware_type_id = Column('id_type', Integer, ForeignKey('hardware_types.type_id'))
     hardware_brand_id = Column('id_brand', Integer, ForeignKey('brands.brand_id'))
-    serial_num = Column(String)
-    description = Column('descrip', String)
+    serial_num = Column(String, nullable=True)
+    description = Column('descrip', String, nullable=True)
     validation_date = Column(Date, default=date.today)
     log_date = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     # -- relationships
@@ -283,16 +289,15 @@ class Hardware(Base):
     hardware_type = relationship('HardwareType', viewonly='True')
     hardware_use = relationship('HardwareUse', backref='hardware_use', uselist=False)
 
-    def __init__(self, id_: int, name: str, id_condition: int, id_type: int, id_brand: int, validation_date,
-                 serial=None, description=None):
-        self.hardware_id = id_
-        self.name = name
-        self.hardware_condition_id = id_condition
-        self.hardware_type_id = id_type
-        self.hardware_brand_id = id_brand
-        self.validation_date = validation_date
-        self.serial_num = serial
-        self.description = description
+    def __init__(self, **hardware_data):
+        self.hardware_id = int(hardware_data['hardware_id'])
+        self.name = hardware_data['hardware_name']
+        self.hardware_condition_id = hardware_data['condition_id']
+        self.hardware_type_id = int(hardware_data['type_id'])
+        self.hardware_brand_id = int(hardware_data['brand_id'])
+        self.validation_date = hardware_data['validation_date']
+        self.serial_num = hardware_data.get('serial', None)
+        self.description = hardware_data.get('description', None)
 
     def __repr__(self):
         return f'Hardware(hardware_id={self.hardware_id}, name={self.name}'
@@ -303,6 +308,44 @@ class Hardware(Base):
         result = db_session.query(Hardware).all()
         return result
 
+    @classmethod
+    def get_hardware(cls, hardware_id):
+        db_session = load_session()
+        hrdw = db_session.query(Hardware).filter(Hardware.hardware_id == hardware_id).scalar()
+        db_session.close()
+        return hrdw
+
+    @hybrid_property
+    def code_format(self):
+        return str(self.hardware_id).zfill(8)
+
+    @hybrid_method
+    def edit_hardware(self):
+        db_session = load_session()
+        hardware = db_session.query(Hardware).filter(Hardware.hardware_id == self.hardware_id).scalar()
+
+        hardware.name = self.name
+        hardware.hardware_condition_id = self.hardware_condition_id
+        hardware.hardware_type_id = self.hardware_type_id
+        hardware.hardware_brand_id = self.hardware_brand_id
+        hardware.validation_date = self.validation_date
+        hardware.serial_num = self.serial_num
+        hardware.description = self.description
+        db_session.commit()
+        db_session.close()
+
+
+class HardwareEdit:
+    def __init__(self, hardware_id):
+        self.hardware_id = hardware_id
+
+    def __call__(self):
+        db_session = load_session()
+        self.hardware = db_session.query(Hardware).filter(Hardware.hardware_id == self.hardware_id).scalar()
+        self.hardware_conditions = db_session.query(HardwareCondition).all()
+        self.hardware_types = db_session.query(HardwareType).all()
+        self.hardware_brands = db_session.query(Brand).all()
+        db_session.close()
 
 # === Hardware Use
 
@@ -330,6 +373,12 @@ class HardwareUse(Base):
 
     def __repr__(self):
         return f'{self.hardware_id}-{self.hardware.name}, status {self.status.name}'
+
+    def status_color(self):
+        if self.status_id == ArrangeStatus.FREE:
+            return 'bg-success'
+        elif self.status_id == ArrangeStatus.IN_USE:
+            return 'bg-hardware-unavailable'
 
 
 # === Worker

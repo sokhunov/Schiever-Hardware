@@ -8,6 +8,7 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 secret = secrets.token_urlsafe(32)
 app.secret_key = secret
 
+
 @app.route('/')
 def hardware_list():
     list_of_hardware = model.Hardware.get_list_of_hardware()
@@ -32,4 +33,19 @@ def arrange_hardware():
     result = model.ArrangeHardware(**form_data)
     message, status = result.arrange()
     flash(message, status)
+    return redirect(url_for('hardware_list'))
+
+
+@app.route('/edit_hardware/<hardware_id>', methods=['GET'])
+def pre_edit_hardware(hardware_id):
+    hardware_info = model.HardwareEdit(hardware_id=hardware_id)
+    hardware_info()
+    return render_template('edit_hardware.html', hardware_info=hardware_info)
+
+
+@app.route('/edit_hardware', methods=['POST'])
+def edit_hardware():
+    form_data = request.form.to_dict()
+    hardware_to_edit = model.Hardware(**form_data)
+    hardware_to_edit.edit_hardware()
     return redirect(url_for('hardware_list'))
