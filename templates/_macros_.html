@@ -18,10 +18,14 @@
 {#               onclick="return confirm('Вы уверены, что хотите удалить ?')">#}
 {#                <i class="fa fa-times" aria-hidden="true"></i></a>#}
 {#        </td>#}
-            <button class="btn add_for_arrange"><i class="fa fa-plus-circle" aria-hidden="true"></i></button>
+            <button class="btn border btn-xs p-2 add_for_arrange"><i class="fa fa-plus-circle" aria-hidden="true"></i></button>
             <a href="{{ url_for('pre_edit_hardware', hardware_id = hardware.hardware_id ) }}"
                class="btn border btn-xs p-2">
                 <i class="fa fa-pencil" aria-hidden="true"></i>
+            </a>
+            <a href="{{ url_for('arrangement_info', hardware_id = hardware.hardware_id ) }}"
+               class="btn border btn-xs p-2">
+                <i class="far fa-file-alt" aria-hidden="true"></i>
             </a>
 
         </td>

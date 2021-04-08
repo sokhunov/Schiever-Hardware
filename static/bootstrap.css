@@ -6798,6 +6798,10 @@ button.bg-warning:focus {
   background-color: #dc3545 !important;
 }
 
+.bg-hardware-unavailable{
+  background-color: #e75858 !important;
+}
+
 a.bg-danger:hover, a.bg-danger:focus,
 button.bg-danger:hover,
 button.bg-danger:focus {

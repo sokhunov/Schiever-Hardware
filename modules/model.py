@@ -80,27 +80,27 @@ class ArrangeHardware(Base):
     it_worker = relationship('Worker', foreign_keys=[it_worker_id])
 
     def __init__(self, **kwargs):
-        self.hardware_id = [int(h_id) for h_id in kwargs['hardware_id']]
+        print('KWARGS ------------> ', kwargs)
+        self.hardware_id = self._convert_hardware_code(kwargs['hardware_id'])
         self.it_worker_id = int(kwargs['it_worker'][0])
         self.employee_id = int(kwargs['employee'][0])
         self.operation_id = int(kwargs['operation'][0])
         self.doc_num = kwargs['doc_num'][0]
         self.doc_date = kwargs['doc_date'][0]
         self.employee2_id = int(kwargs['employee_2'][0]) if kwargs['employee_2'][0] else None
-        self.db_session = load_session()
-        self.hardware_arrange = self.get_hardware()
+        self.hardware_arrange = []
+        self.db_session = None
         self.unavailable_hardware = []
-
-        self.create_hardware_for_arrange()
 
     def __repr__(self):
         return f'Arrange(hardware = {self.hardware}, it_worker_id = {self.it_worker}, employee = {self.employee}' \
                f'operation = {self.operation} '
 
-    @hybrid_method
-    def get_hardware(self) -> list:
-        result = self.db_session.query(Hardware).filter(Hardware.hardware_id.in_(self.hardware_id)).all()
-        return result
+    def __call__(self):
+        self.db_session = load_session()
+        self.hardware_arrange = self.get_hardware()
+        self.create_missing_hardware()
+        return self.arrange()
 
     def arrange(self):
         status_code = self.validate_operation()
@@ -108,11 +108,27 @@ class ArrangeHardware(Base):
             return self.get_status_message(status_code)
 
         self.arrange_to_employee()
-
+        self.save_arrange_to_db()
         return self.get_status_message(status_code)
+
+    @staticmethod
+    def _convert_hardware_code(code):
+        if isinstance(code, list):
+            return [int(x) for x in code]
+        return code
+
+    @hybrid_method
+    def get_hardware(self) -> list:
+        result = self.db_session.query(Hardware).filter(Hardware.hardware_id.in_(self.hardware_id)).all()
+        return result
 
     @hybrid_method
     def get_status_message(self, status_code=0):
+        """
+        Arrange operation return status message and code
+        :param status_code:
+        :return:
+        """
         if status_code == 0:
             return self.STATUS_MESSAGES[status_code]['message'],\
                    self.STATUS_MESSAGES[status_code]['status']
@@ -121,7 +137,7 @@ class ArrangeHardware(Base):
                    self.STATUS_MESSAGES[status_code]['status']
 
     @hybrid_method
-    def create_hardware_for_arrange(self):
+    def create_missing_hardware(self):
         """
         Create hardware which is not in the db table Hardware_use
         :return:
@@ -189,6 +205,27 @@ class ArrangeHardware(Base):
             hardware_.hardware_use.employee_id = employee_id
 
         self.db_session.commit()
+
+    @hybrid_method
+    def save_arrange_to_db(self):
+        arr_to_create = []
+        for hardware_ in self.hardware_arrange:
+            hardware_info = hardware_.__dict__
+            hardware_info.
+            new_arr = ArrangeHardware(**hardware_info)
+            arr_to_create.append(new_arr)
+
+        self.db_session.add_all(arr_to_create)
+        self.db_session.commit()
+
+    @classmethod
+    def get_hardware_arrangement(cls, hardware_id):
+        db_session = load_session()
+        result = db_session.query(ArrangeHardware).filter(ArrangeHardware.hardware_id == hardware_id).\
+            order_by(ArrangeHardware.doc_date).all()
+
+        # db_session.close()
+        return result
 
 
 class PreArrange:
@@ -417,6 +454,9 @@ class Worker(Base):
         self.worker_id = worker_id
         self.name = name
         self.department_id = department_id
+
+    def __repr__(self):
+        return f'Worker(worker_id = {self.worker_id}, name = {self.name}, department = {self.department.name})'
 
 
 Base.prepare()

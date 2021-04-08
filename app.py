@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import modules.model as model
 import secrets
+import pdfkit
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -29,9 +30,10 @@ def prepare_for_arrange():
 
 @app.route('/arrange_hardware', methods=['POST'])
 def arrange_hardware():
+    # pdfkit.from_file('./templates/arrange_hardware.html', r'd:\TEST.pdf')
     form_data = request.form.to_dict(flat=False)
-    result = model.ArrangeHardware(**form_data)
-    message, status = result.arrange()
+    arrange_ins = model.ArrangeHardware(**form_data)
+    message, status = arrange_ins()
     flash(message, status)
     return redirect(url_for('hardware_list'))
 
@@ -48,4 +50,11 @@ def edit_hardware():
     form_data = request.form.to_dict()
     hardware_to_edit = model.Hardware(**form_data)
     hardware_to_edit.edit_hardware()
+    return redirect(url_for('hardware_list'))
+
+
+@app.route('/arrange_info/<hardware_id>')
+def arrangement_info(hardware_id):
+    hardware_arran_history = model.ArrangeHardware.get_hardware_arrangement(hardware_id=hardware_id)
+    print(hardware_arran_history)
     return redirect(url_for('hardware_list'))

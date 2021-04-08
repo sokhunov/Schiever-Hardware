@@ -4,10 +4,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import func
 from sqlalchemy.ext.hybrid import hybrid_method
 from datetime import datetime, date
-from modules.model_workers import Worker
-from modules.hardware import Hardware, HardwareUse
-from modules.session_manager import load_session
-
 
 Base = automap_base()
 
@@ -48,20 +44,21 @@ class ArrangeHardware(Base):
     __tablename__ = 'arranges'
 
     arrange_id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
-    hardware_id = Column(Integer, ForeignKey(Hardware.hardware_id))
-    employee_id = Column(Integer, ForeignKey(Worker.worker_id))
-    it_worker_id = Column(Integer, ForeignKey(Worker.worker_id))
-    employee2_id = Column(Integer, ForeignKey(Worker.worker_id), nullable=True)
+    hardware_id = Column(Integer, ForeignKey('hardware.hardware_id'))
+    employee_id = Column(Integer, ForeignKey('workers.worker_id'))
+    it_worker_id = Column(Integer, ForeignKey('workers.worker_id'))
+    employee2_id = Column(Integer, ForeignKey('workers.worker_id'), nullable=True)
     operation_id = Column(Integer, ForeignKey('arrange_operations.operation_id'))
     doc_num = Column(Integer)  # Act number
     doc_date = Column(Date, default=date.today)
     log_date = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    hardware = relationship(Hardware)
-    employee = relationship(Worker, foreign_keys=[employee_id])
-    employee2 = relationship(Worker, foreign_keys=[employee2_id])
-    operation = relationship(ArrangeOperation)
-    it_worker = relationship(Worker, foreign_keys=[it_worker_id])
+    # -- relationships
+    hardware = relationship('Hardware', viewonly=True)
+    employee = relationship('Worker', foreign_keys=[employee_id])
+    employee2 = relationship('Worker', foreign_keys=[employee2_id])
+    operation = relationship('ArrangeOperation', viewonly=True)
+    it_worker = relationship('Worker', foreign_keys=[it_worker_id])
 
     def __init__(self, **kwargs):
         self.hardware_id = [int(h_id) for h_id in kwargs['hardware_id']]
@@ -71,11 +68,42 @@ class ArrangeHardware(Base):
         self.doc_num = kwargs['doc_num'][0]
         self.doc_date = kwargs['doc_date'][0]
         self.employee2_id = int(kwargs['employee_2'][0]) if kwargs.get('employee_2') else None
+        self.db_session = smanager.load_session()
+
+    def arrange(self):
+        missing_hardware = self.get_missing_hardware()
+
+        if missing_hardware:
+            self.create_hardware(missing_hardware)
+
+    @hybrid_method
+    def get_missing_hardware(self) -> list:
+        missing_hardware = []
+        result = self.db_session.query(hard.Hardware).filter(hard.Hardware.hardware_id.in_(self.hardware_id)).all()
+        if result:
+            for hardware in result:
+                if not hardware.hardware_use:
+                    missing_hardware.append(hardware)
+        else:
+            missing_hardware.extend(result)
+
+        return missing_hardware
+
+    @hybrid_method
+    def create_hardware(self, hardware_to_create):
+        hardware_list = []
+        for hardware in hardware_to_create:
+            hardware_use = HardwareUse(hardware_id=hardware.hardware_id)
+            hardware.hardware_use.append(hardware_use)
+            hardware_list.append(hardware)
+
+        self.db_session.add_all(hardware_list)
+        self.db_session.commit()
 
 
 class PreArrange:
     def __init__(self, hardware):
-        self.db_session = load_session()
+        self.db_session = smanager.load_session()
         self.hardware = self.get_selected_hardware(hardware_id=hardware)
         self.it_workers = self.get_workers(it_workers=True)
         self.workers = self.get_workers(it_workers=False)
@@ -90,16 +118,16 @@ class PreArrange:
         :return -> list: List of it workers
         """
         if it_workers:
-            return self.db_session.query(Worker).filter(Worker.department_id == 1).all()
+            return self.db_session.query(work.Worker).filter(work.Worker.department_id == 1).all()
         else:
-            return self.db_session.query(Worker).filter(Worker.department_id != 1).all()
+            return self.db_session.query(work.Worker).filter(work.Worker.department_id != 1).all()
 
     def get_next_doc_num(self):
         """
         Get the last document number from DB table HardwareUse
         :return:
         """
-        last_doc_num = self.db_session.query(func.max(HardwareUse.doc_num)).scalar()
+        last_doc_num = self.db_session.query(func.max(hard_use.HardwareUse.doc_num)).scalar()
         if not last_doc_num:
             return 1
 
@@ -109,11 +137,7 @@ class PreArrange:
         return self.db_session.query(ArrangeOperation).all()
 
     def get_selected_hardware(self, hardware_id: list):
-        return self.db_session.query(Hardware).filter(Hardware.hardware_id.in_(hardware_id)).all()
-
-
-def arrange(form):
-    pass
+        return self.db_session.query(hard.Hardware).filter(hard.Hardware.hardware_id.in_(hardware_id)).all()
 
 
 Base.prepare()

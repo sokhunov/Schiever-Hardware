@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_method
 from datetime import date, datetime
 from modules.session_manager import load_session
+import old_modules.hardware_use as hard_use
 
 
 Base = automap_base()
@@ -55,9 +56,10 @@ class Hardware(Base):
     validation_date = Column(Date, default=date.today)
     log_date = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     # -- relationships
-    hardware_brand = relationship('Brand')
-    hardware_condition = relationship('HardwareCondition')
-    hardware_type = relationship('HardwareType')
+    hardware_brand = relationship('Brand', viewonly='True')
+    hardware_condition = relationship('HardwareCondition', viewonly='True')
+    hardware_type = relationship('HardwareType', viewonly='True')
+    hardware_use = relationship(hard_use.HardwareUse, backref='hardware')
 
     def __init__(self, id_: int, name: str, id_condition: int, id_type: int, id_brand: int, validation_date,
                  serial=None, description=None):

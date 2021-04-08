@@ -1,7 +1,6 @@
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from modules.hardware import HardwareUse
 
 
 Base = automap_base()
@@ -34,7 +33,7 @@ class Worker(Base):
     department_id = Column(Integer, ForeignKey('departments.department_id'))
     department = relationship(Department)
 
-    worker_hardware = relationship(HardwareUse, backref='workers')
+    worker_hardware = relationship('HardwareUse', backref='workers')
 
     def __init__(self, worker_id, name, department_id):
         self.worker_id = worker_id
