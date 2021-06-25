@@ -7,11 +7,7 @@ def create_connection_to_sql():
     Create connection engine to sql database
     :return engine: sql connection engine
     """
-    DB = {'server': '10.101.42.111',
-          'user': 'python',
-          'pw': 'monthypython',
-          'database': 'STJ_HARDWARE',
-          'driver': 'driver=SQL Server Native Client 11.0'}
+    
 
     engine = create_engine(f"mssql+pyodbc://{DB['user']}:{DB['pw']}@{DB['server']}/{DB['database']}?{DB['driver']}",
                            echo=True)
